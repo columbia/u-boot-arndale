@@ -387,6 +387,44 @@ static unsigned long exynos5_get_uart_clk(int dev_index)
 	return uclk;
 }
 
+/* exynos4: return mmc clock frequency */
+static unsigned long exynos4_get_mmc_clk(int dev_index)
+{
+	struct exynos4_clock *clk =
+		(struct exynos4_clock *)samsung_get_base_clock();
+	unsigned long uclk, sclk;
+	unsigned int sel;
+	unsigned int ratio;
+	unsigned int pre_ratio;
+
+	sel = readl(&clk->src_fsys);
+	sel = (sel >> (dev_index << 2)) & 0xf;
+
+	if (sel == 0x6)
+		sclk = get_pll_clk(MPLL);
+	else if (sel == 0x7)
+		sclk = get_pll_clk(EPLL);
+	else if (sel == 0x8)
+		sclk = get_pll_clk(VPLL);
+	else
+		return 0;
+
+	if (dev_index == 0) {
+		ratio = readl(&clk->div_fsys0);
+		pre_ratio = readl(&clk->div_fsys0);
+	} else if (dev_index == 4) {
+		ratio = readl(&clk->div_fsys3);
+		pre_ratio = readl(&clk->div_fsys3);
+	} else
+		return 0;
+
+	ratio = ratio & 0xf;
+	pre_ratio = (pre_ratio >> (dev_index + 8)) & 0xff;
+	uclk = (sclk /(ratio + 1))/(pre_ratio + 1);
+
+	return uclk;
+}
+
 /* exynos4: set the mmc clock */
 static void exynos4_set_mmc_clk(int dev_index, unsigned int div)
 {
@@ -414,13 +452,28 @@ static void exynos4_set_mmc_clk(int dev_index, unsigned int div)
 	writel(val, addr);
 }
 
-/* exynos5: set the mmc clock */
-static void exynos5_set_mmc_clk(int dev_index, unsigned int div)
+/* exynos5: return mmc clock frequency */
+static unsigned long exynos5_get_mmc_clk(int dev_index)
 {
 	struct exynos5_clock *clk =
 		(struct exynos5_clock *)samsung_get_base_clock();
-	unsigned int addr;
-	unsigned int val;
+	unsigned long uclk, sclk;
+	unsigned int sel;
+	unsigned int ratio;
+	unsigned int pre_ratio;
+	unsigned int addr, addr_mmc;
+
+	sel = readl(&clk->src_fsys);
+	sel = (sel >> (dev_index << 2)) & 0xf;
+
+	if (sel == 0x6)
+		sclk = get_pll_clk(MPLL);
+	else if (sel == 0x7)
+		sclk = get_pll_clk(EPLL);
+	else if (sel == 0x8)
+		sclk = get_pll_clk(VPLL);
+	else
+		return 0;
 
 	/*
 	 * CLK_DIV_FSYS1
@@ -435,6 +488,54 @@ static void exynos5_set_mmc_clk(int dev_index, unsigned int div)
 		dev_index -= 2;
 	}
 
+	ratio = readl(addr);
+	ratio = (ratio >> (dev_index << 2)) & 0xf;
+	pre_ratio = readl(addr);
+	pre_ratio = (pre_ratio >> ((dev_index<< 4) + 8)) & 0xff;
+
+	uclk = (sclk /(ratio + 1))/(pre_ratio + 1);
+
+	/* Actual sclk mmc is available after mmc divider */
+	ratio = readl(addr_mmc);
+	ratio = (ratio >> 24 ) & 0x7;
+	
+	return uclk;
+}
+
+/* exynos5: set the mmc clock */
+static void exynos5_set_mmc_clk(int dev_index, unsigned int div)
+{
+	struct exynos5_clock *clk =
+		(struct exynos5_clock *)samsung_get_base_clock();
+	unsigned int addr;
+	unsigned int val;
+
+	if (dev_index < 2) {
+		addr = (unsigned int)&clk->div_fsys1;
+	} else {
+		addr = (unsigned int)&clk->div_fsys2;
+		dev_index -= 2;
+	}
+
+	/* 
+	 * CLK_DIV_FSYS1
+	 * MMC0_RATIO[3:0], MMC1_RATIO[3:0]
+	 * CLK_DIV_FSYS2
+	 * MMC2_RATIO[3:0], MMC3_RATIO[3:0]
+	 * Bypass the divider ratio and use only pre ratio to select
+	 * the sclk mmc 
+	 */
+
+	val = readl(addr);
+	val &= ~(0xf << (dev_index * 16));
+	writel(val, addr);
+	
+	/*
+	 * CLK_DIV_FSYS1
+	 * MMC0_PRE_RATIO [15:8], MMC1_PRE_RATIO [31:24]
+	 * CLK_DIV_FSYS2
+	 * MMC2_PRE_RATIO [15:8], MMC3_PRE_RATIO [31:24]
+	 */
 	val = readl(addr);
 	val &= ~(0xff << ((dev_index << 4) + 8));
 	val |= (div & 0xff) << ((dev_index << 4) + 8);
@@ -774,6 +875,14 @@ unsigned long get_uart_clk(int dev_index)
 		return exynos4_get_uart_clk(dev_index);
 }
 
+unsigned long get_mmc_clk(int dev_index)
+{
+	if (cpu_is_exynos5())
+		return exynos5_get_mmc_clk(dev_index);
+	else
+		return exynos4_get_mmc_clk(dev_index);
+}
+
 void set_mmc_clk(int dev_index, unsigned int div)
 {
 	if (cpu_is_exynos5())
@@ -802,4 +911,18 @@ void set_mipi_clk(void)
 {
 	if (cpu_is_exynos4())
 		exynos4_set_mipi_clk();
+}
+
+/*
+ * Dump some core clockes.
+ */
+int do_showclocks(void)
+{
+	printf("\n");
+	printf("USDHC1     %8d kHz\n", get_mmc_clk(0));
+	printf("USDHC2     %8d kHz\n", get_mmc_clk(1));
+	printf("USDHC3     %8d kHz\n", get_mmc_clk(2));
+	printf("USDHC4     %8d kHz\n", get_mmc_clk(3));
+
+	return 0;
 }

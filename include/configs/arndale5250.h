@@ -45,8 +45,8 @@
 
 /* input clock of PLL: SMDK5250 has 24MHz input clock */
 #define CONFIG_SYS_CLK_FREQ		24000000
-#define CONFIG_ARM_CLK_FREQ            1700 /* in MHz*/
-#define CONFIG_BUS_CLK_FREQ            800 /* in MHz*/
+#define CONFIG_ARM_CLK_FREQ		1000 /* in MHz*/
+#define CONFIG_BUS_CLK_FREQ		800 /* in MHz*/
 
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_CMDLINE_TAG
@@ -71,7 +71,7 @@
 
 /* select serial console configuration */
 #define CONFIG_SERIAL_MULTI
-#define CONFIG_SERIAL3			/* use SERIAL 3 */
+#define CONFIG_SERIAL2			/* use SERIAL 3 */
 #define CONFIG_BAUDRATE			115200
 #define EXYNOS5_DEFAULT_UART_OFFSET	0x010000
 
@@ -80,8 +80,8 @@
 /* SD/MMC configuration */
 #define CONFIG_GENERIC_MMC
 #define CONFIG_MMC
-#define CONFIG_SDHCI
-#define CONFIG_S5P_SDHCI
+#define CONFIG_DWMMC
+#define CONFIG_EXYNOS_DWMMC
 
 #define CONFIG_BOARD_EARLY_INIT_F
 
@@ -100,6 +100,7 @@
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_NET
+#define CONFIG_SUPPORT_RAW_INITRD
 
 #define CONFIG_BOOTDELAY		3
 #define CONFIG_ZERO_BOOTDELAY_CHECK
@@ -120,15 +121,14 @@
 #define CONFIG_SPL_MAX_SIZE	(14 * 1024)
 
 #define CONFIG_BOOTCOMMAND	"mmc read 40007000 451 2000; bootm 40007000"
-
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser	*/
-#define CONFIG_SYS_PROMPT		"SMDK5250 # "
+#define CONFIG_SYS_PROMPT		"ARNDALE5250 # "
 #define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE		384	/* Print Buffer Size */
 #define CONFIG_SYS_MAXARGS		16	/* max number of command args */
-#define CONFIG_DEFAULT_CONSOLE		"console=ttySAC1,115200n8\0"
+#define CONFIG_DEFAULT_CONSOLE		"console=ttySAC2,115200n8\0"
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 /* memtest works on */
@@ -164,7 +164,7 @@
 /* FLASH and environment organization */
 #define CONFIG_SYS_NO_FLASH
 #undef CONFIG_CMD_IMLS
-#define CONFIG_IDENT_STRING		" for SMDK5250"
+#define CONFIG_IDENT_STRING		" for ARNDALE5250"
 
 #define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		0
@@ -214,12 +214,6 @@
 #define CONFIG_SMC911X_16_BIT
 #define CONFIG_ENV_SROM_BANK		1
 #endif /*CONFIG_CMD_NET*/
-
-/* Enable PXE Support */
-#ifdef CONFIG_CMD_NET
-#define CONFIG_CMD_PXE
-#define CONFIG_MENU
-#endif
 
 /* Enable devicetree support */
 #define CONFIG_OF_LIBFDT
