@@ -45,7 +45,7 @@
 
 /* input clock of PLL: SMDK5250 has 24MHz input clock */
 #define CONFIG_SYS_CLK_FREQ		24000000
-#define CONFIG_ARM_CLK_FREQ		1000 /* in MHz*/
+#define CONFIG_ARM_CLK_FREQ		1400 /* in MHz*/
 #define CONFIG_BUS_CLK_FREQ		800 /* in MHz*/
 
 #define CONFIG_SETUP_MEMORY_TAGS
